@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>توصيل الغردقة Express - المطعم والكابتن</title>
+    <!-- FontAwesome & Google Fonts -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root[data-theme="light"] {
+            --primary: #2563eb; --primary-dark: #1d4ed8; --secondary: #10b981; --danger: #ef4444; --warning: #f59e0b;
+            --card-bg: #ffffff; --bg-light: #f8fafc; --text-main: #334155; --text-muted: #64748b;
+            --border: #e2e8f0; --header-bg: #0f172a; --input-bg: #fafafa;
+        }
+        :root[data-theme="dark"] {
+            --primary: #3b82f6; --primary-dark: #2563eb; --secondary: #10b981; --danger: #f87171; --warning: #fbbf24;
+            --card-bg: #1e293b; --bg-light: #0f172a; --text-main: #f1f5f9; --text-muted: #94a3b8;
+            --border: #334155; --header-bg: #020617; --input-bg: #0f172a;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Tajawal', sans-serif; transition: background-color 0.3s ease, color 0.3s ease; }
+        body { background-color: var(--bg-light); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+
+        header { background-color: var(--header-bg); color: white; padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .logo { font-size: 1.3rem; font-weight: 800; display: flex; align-items: center; gap: 10px; color: #38bdf8; }
+        .theme-toggle-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #f1f5f9; padding: 8px 14px; border-radius: 20px; cursor: pointer; font-weight: 700; display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+
+        main { flex: 1; padding: 1.5rem; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+        .auth-container { max-width: 420px; margin: 3rem auto; background: var(--card-bg); border-radius: 16px; padding: 2rem; border: 1px solid var(--border); box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+        .auth-title { font-size: 1.3rem; font-weight: 800; text-align: center; margin-bottom: 1.5rem; }
+        .tab-group { display: flex; background: var(--input-bg); padding: 4px; border-radius: 10px; margin-bottom: 1.5rem; border: 1px solid var(--border); }
+        .tab-btn { flex: 1; border: none; padding: 10px; border-radius: 8px; font-weight: 700; cursor: pointer; background: transparent; color: var(--text-muted); }
+        .tab-btn.active { background: var(--primary); color: white; }
+
+        .form-group { margin-bottom: 1rem; }
+        .form-group label { display: block; margin-bottom: 0.4rem; font-weight: 600; font-size: 0.9rem; color: var(--text-muted); }
+        .form-control { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border); border-radius: 10px; font-size: 0.95rem; background-color: var(--input-bg); color: var(--text-main); }
+        .form-control:focus { outline: none; border-color: var(--primary); }
+
+        .error-alert { background: rgba(239, 68, 68, 0.1); border: 1px solid var(--danger); color: var(--danger); padding: 10px; border-radius: 10px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1rem; display: none; text-align: center; }
+
+        .btn { border: none; padding: 0.75rem 1.25rem; border-radius: 10px; font-weight: 700; cursor: pointer; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.95rem; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-warning { background: var(--warning); color: #000; }
+        .btn-success { background: var(--secondary); color: white; }
+        .btn-secondary { background: #64748b; color: white; }
+        .btn-outline-call { background: transparent; border: 2px solid var(--secondary); color: var(--secondary); font-weight: 800; }
+        .btn-outline-call:hover { background: var(--secondary); color: white; }
+
+        .user-bar { background: var(--card-bg); padding: 12px 18px; border-radius: 12px; border: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 10px; }
+        .grid-layout { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.5rem; }
+        .card { background: var(--card-bg); border-radius: 16px; padding: 1.5rem; border: 1px solid var(--border); box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .card-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 1rem; border-bottom: 2px solid var(--border); padding-bottom: 0.5rem; display: flex; align-items: center; gap: 8px; }
+
+        .order-card { background: var(--card-bg); border-radius: 16px; padding: 1.2rem; margin-bottom: 1rem; border: 1px solid var(--border); border-right: 6px solid var(--primary); }
+        .price-box { display: flex; gap: 10px; margin: 10px 0; font-weight: 800; font-size: 0.9rem; }
+        .price-tag { background: rgba(16,185,129,0.1); color: var(--secondary); padding: 8px 12px; border-radius: 8px; flex: 1; text-align: center; border: 1px solid var(--secondary); }
+        .food-price-tag { background: rgba(239,68,68,0.1); color: var(--danger); padding: 8px 12px; border-radius: 8px; flex: 1; text-align: center; border: 1px solid var(--danger); }
+        .gps-box { background: rgba(16, 185, 129, 0.1); border: 1px solid var(--secondary); padding: 8px 12px; border-radius: 8px; margin-bottom: 1rem; font-size: 0.85rem; color: var(--secondary); }
+        .captain-details-box { background: rgba(37, 99, 235, 0.05); border: 1px solid var(--primary); padding: 10px 14px; border-radius: 10px; margin: 10px 0; font-size: 0.88rem; }
+        .btn-group-row { display: flex; gap: 8px; margin: 10px 0; }
+        
+        .status-toggle-container { display: flex; gap: 6px; background: var(--input-bg); padding: 4px; border-radius: 10px; border: 1px solid var(--border); }
+        .status-pill { border: none; padding: 6px 12px; border-radius: 8px; font-weight: 700; cursor: pointer; font-size: 0.85rem; background: transparent; color: var(--text-muted); }
+        .status-pill.active-online { background: var(--secondary); color: white; }
+        .status-pill.active-offline { background: var(--danger); color: white; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo"><i class="fa-solid fa-truck-fast"></i> توصيل الغردقة Express</div>
+        <button class="theme-toggle-btn" onclick="toggleTheme()">
+            <i class="fa-solid fa-moon" id="themeIcon"></i> <span id="themeText">الوضع المظلم</span>
+        </button>
+    </header>
+
+    <main>
+        <!-- شاشة تسجيل الدخول -->
+        <div id="authSection" class="auth-container">
+            <div class="tab-group">
+                <button class="tab-btn active" id="typeRestBtn" onclick="setAuthType('restaurant')"><i class="fa-solid fa-utensils"></i> المطعم</button>
+                <button class="tab-btn" id="typeCaptainBtn" onclick="setAuthType('captain')"><i class="fa-solid fa-motorcycle"></i> الكابتن</button>
+            </div>
+            <div class="auth-title" id="authTitle">تسجيل دخول المطعم</div>
+            <div class="error-alert" id="authErrorMsg">
+                <i class="fa-solid fa-triangle-exclamation"></i> خطأ! الحساب غير موجود. تأكد من عمل الحساب من لوحة التحكم أولاً.
+            </div>
+            <form onsubmit="handleLoginSubmit(event)">
+                <div class="form-group">
+                    <label>الإيميل أو الهاتف المعين لك</label>
+                    <input type="text" id="authEmail" class="form-control" placeholder="أدخل الإيميل المسجل بالداش بورد" required>
+                </div>
+                <div class="form-group">
+                    <label>كلمة السر</label>
+                    <input type="password" id="authPassword" class="form-control" placeholder="******" required>
+                </div>
+                <button type="submit" class="btn btn-primary">تسجيل الدخول</button>
+            </form>
+        </div>
+
+        <!-- واجهة المطعم -->
+        <div id="restaurantDashboard" style="display:none;">
+            <div class="user-bar">
+                <div><i class="fa-solid fa-utensils"></i> المطعم: <strong id="restNameDisplay"></strong></div>
+                <button class="btn btn-danger" style="width:auto; padding:6px 14px;" onclick="logout()">خروج</button>
+            </div>
+            <div class="grid-layout">
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-plus-circle"></i> تسجيل أوردر جديد</div>
+                    <div class="gps-box" id="restGpsBox"><i class="fa-solid fa-location-dot"></i> جاري ربط موقع المطعم بالـ GPS...</div>
+                    <form onsubmit="handleCreateOrder(event)">
+                        <div class="form-group">
+                            <label>سعر الطعام (المطلوب دفعه للمطعم)</label>
+                            <input type="number" id="foodPrice" class="form-control" placeholder="مثال: 150" required>
+                        </div>
+                        <div class="form-group">
+                            <label>منطقة التوصيل بالغردقة</label>
+                            <select id="hurghadaArea" class="form-control" onchange="calcPrice()">
+                                <option value="الدهار" data-lat="27.2579" data-lng="33.8116">الدهار</option>
+                                <option value="السقالة" data-lat="27.2227" data-lng="33.8423">السقالة</option>
+                                <option value="الكوثر" data-lat="27.1904" data-lng="33.8277">الكوثر</option>
+                                <option value="الممشى السياحي" data-lat="27.1812" data-lng="33.8291">الممشى السياحي</option>
+                                <option value="الأحياء" data-lat="27.3150" data-lng="33.7220">الأحياء</option>
+                                <option value="طريق القرى" data-lat="27.1230" data-lng="33.8260">طريق القرى</option>
+                                <option value="سهل حشيش" data-lat="27.0490" data-lng="33.8890">سهل حشيش</option>
+                                <option value="مكادي باي" data-lat="26.9890" data-lng="33.8980">مكادي باي</option>
+                                <option value="الجونة" data-lat="27.3963" data-lng="33.6781">الجونة</option>
+                                <option value="المطار" data-lat="27.1783" data-lng="33.7994">المطار</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>وقت التجهيز المتوقع</label>
+                            <select id="prepTime" class="form-control">
+                                <option value="جاهز فوراً للتسليم ⚡">جاهز فوراً للتسليم ⚡</option>
+                                <option value="يجهز خلال 10 دقائق ⏱️">يجهز خلال 10 دقائق ⏱️</option>
+                                <option value="يجهز خلال 15 دقيقة ⏱️">يجهز خلال 15 دقيقة ⏱️</option>
+                                <option value="يجهز خلال 20 دقيقة ⏱️">يجهز خلال 20 دقيقة ⏱️</option>
+                                <option value="يجهز خلال 30 دقيقة ⏱️">يجهز خلال 30 دقيقة ⏱️</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>اسم العميل</label>
+                            <input type="text" id="clientName" class="form-control" placeholder="اسم العميل" required>
+                        </div>
+                        <div class="form-group">
+                            <label>رقم هاتف العميل</label>
+                            <input type="tel" id="clientPhone" class="form-control" placeholder="01xxxxxxxx" required>
+                        </div>
+                        <div class="form-group">
+                            <label>العنوان التفصيلي وملاحظات الطلب</label>
+                            <input type="text" id="clientAddress" class="form-control" placeholder="اسم الشارع، رقم الشقة">
+                        </div>
+                        <div class="price-tag" style="margin-bottom:1rem;">سعر التوصيل المقدر (8ج/كم): <span id="deliveryPriceVal">30</span> جنيه</div>
+                        <button type="submit" class="btn btn-primary">إرسال الطلب</button>
+                    </form>
+                </div>
+                <div class="card">
+                    <div class="card-title"><i class="fa-solid fa-list-check"></i> طلبات المطعم وتفاصيل الكابتن والموقع الحي</div>
+                    <div id="restOrdersList"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- واجهة الكابتن -->
+        <div id="captainDashboard" style="display:none;">
+            <div class="user-bar">
+                <div><i class="fa-solid fa-motorcycle"></i> الكابتن: <strong id="captainNameDisplay"></strong></div>
+                
+                <div class="status-toggle-container">
+                    <button class="status-pill active-online" id="btnOnline" onclick="setCaptainStatus('متصل')"><i class="fa-solid fa-signal"></i> متصل</button>
+                    <button class="status-pill" id="btnOffline" onclick="setCaptainStatus('عطلة')"><i class="fa-solid fa-mug-saucer"></i> عطلة</button>
+                </div>
+
+                <button class="btn btn-danger" style="width:auto; padding:6px 14px;" onclick="logout()">خروج</button>
+            </div>
+            <div class="card">
+                <div class="card-title"><i class="fa-solid fa-boxes-stacked"></i> الطلبات المتاحة وحالة الأوردر</div>
+                <div id="captainOrdersList" class="grid-layout"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let currentAuthType = 'restaurant';
+        let currentUser = null;
+        let myCoords = { lat: 27.2579, lng: 33.8116 };
+        const channel = new BroadcastChannel('delivery_system_channel');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initTheme();
+            checkSession();
+            initLiveGpsSecondInterval();
+        });
+
+        channel.onmessage = () => loadOrders();
+
+        function initTheme() {
+            const saved = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', saved);
+        }
+        function toggleTheme() {
+            const curr = document.documentElement.getAttribute('data-theme');
+            const next = curr === 'light' ? 'dark' : 'light';
+            document.documentElement.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        }
+
+        function setAuthType(type) {
+            currentAuthType = type;
+            document.getElementById('typeRestBtn').className = `tab-btn ${type === 'restaurant' ? 'active' : ''}`;
+            document.getElementById('typeCaptainBtn').className = `tab-btn ${type === 'captain' ? 'active' : ''}`;
+            document.getElementById('authTitle').innerText = `تسجيل دخول - ${type === 'restaurant' ? 'المطعم' : 'الكابتن'}`;
+            document.getElementById('authErrorMsg').style.display = 'none';
+        }
+
+        function handleLoginSubmit(e) {
+            e.preventDefault();
+            const email = document.getElementById('authEmail').value.trim();
+            const password = document.getElementById('authPassword').value.trim();
+            const users = JSON.parse(localStorage.getItem('app_users') || '[]');
+
+            const found = users.find(u => u.email === email && u.password === password && u.role === currentAuthType);
+            if (!found) {
+                document.getElementById('authErrorMsg').style.display = 'block';
+                return;
+            }
+            currentUser = found;
+            localStorage.setItem('current_user', JSON.stringify(currentUser));
+            
+            if (currentUser.role === 'captain') {
+                localStorage.setItem(`captain_status_${currentUser.email}`, 'متصل');
+            }
+
+            checkSession();
+        }
+
+        function checkSession() {
+            const saved = localStorage.getItem('current_user');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                document.getElementById('authSection').style.display = 'none';
+                if (currentUser.role === 'restaurant') {
+                    document.getElementById('restaurantDashboard').style.display = 'block';
+                    document.getElementById('restNameDisplay').innerText = currentUser.name;
+                } else {
+                    document.getElementById('captainDashboard').style.display = 'block';
+                    document.getElementById('captainNameDisplay').innerText = currentUser.name;
+                    updateCaptainStatusUI(localStorage.getItem(`captain_status_${currentUser.email}`) || 'متصل');
+                }
+                loadOrders();
+            } else {
+                document.getElementById('authSection').style.display = 'block';
+                document.getElementById('restaurantDashboard').style.display = 'none';
+                document.getElementById('captainDashboard').style.display = 'none';
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('current_user');
+            currentUser = null;
+            checkSession();
+        }
+
+        function setCaptainStatus(status) {
+            localStorage.setItem(`captain_status_${currentUser.email}`, status);
+            updateCaptainStatusUI(status);
+            channel.postMessage({ type: 'CAPTAIN_STATUS_UPDATE' });
+        }
+
+        function updateCaptainStatusUI(status) {
+            const btnOn = document.getElementById('btnOnline');
+            const btnOff = document.getElementById('btnOffline');
+            if (status === 'متصل') {
+                btnOn.className = 'status-pill active-online';
+                btnOff.className = 'status-pill';
+            } else {
+                btnOn.className = 'status-pill';
+                btnOff.className = 'status-pill active-offline';
+            }
+        }
+
+        // تحديث GPS تلقائي ومستمر عالي الدقة يرسل الإحداثيات باستمرار
+        function initLiveGpsSecondInterval() {
+            if ('geolocation' in navigator) {
+                navigator.geolocation.watchPosition(pos => {
+                    myCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+                    updateGpsStorage();
+                }, () => {}, { enableHighAccuracy: true, maximumAge: 0, timeout: 2000 });
+            }
+
+            // تحديث وبث دوري كل ثانية لضمان دقة وتجاوب التتبع
+            setInterval(() => {
+                if (currentUser) {
+                    updateGpsStorage();
+                }
+            }, 1000);
+        }
+
+        function updateGpsStorage() {
+            if (!currentUser) return;
+            if (currentUser.role === 'captain') {
+                localStorage.setItem(`captain_gps_${currentUser.email}`, JSON.stringify(myCoords));
+            } else {
+                localStorage.setItem(`rest_gps_${currentUser.email}`, JSON.stringify(myCoords));
+            }
+            const box = document.getElementById('restGpsBox');
+            if (box) box.innerHTML = `<i class="fa-solid fa-circle-check"></i> تم التحديث الحي لموقع GPS بنجاح`;
+            calcPrice();
+        }
+
+        function calcPrice() {
+            const areaSelect = document.getElementById('hurghadaArea');
+            if (!areaSelect) return 30;
+            const sel = areaSelect.options[areaSelect.selectedIndex];
+            const destLat = parseFloat(sel.getAttribute('data-lat'));
+            const destLng = parseFloat(sel.getAttribute('data-lng'));
+
+            const R = 6371;
+            const dLat = (destLat - myCoords.lat) * Math.PI / 180;
+            const dLon = (destLng - myCoords.lng) * Math.PI / 180;
+            const a = Math.sin(dLat/2)**2 + Math.cos(myCoords.lat * Math.PI / 180) * Math.cos(destLat * Math.PI / 180) * Math.sin(dLon/2)**2;
+            const dist = R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+
+            let price = Math.round(dist * 8); 
+            if (price < 30) price = 30; 
+            document.getElementById('deliveryPriceVal').innerText = price;
+            return price;
+        }
+
+        function handleCreateOrder(e) {
+            e.preventDefault();
+            const price = calcPrice();
+            const orders = JSON.parse(localStorage.getItem('delivery_orders') || '[]');
+
+            const newOrder = {
+                id: 'ORD-' + Math.floor(1000 + Math.random() * 9000),
+                restEmail: currentUser.email,
+                restName: currentUser.name,
+                foodPrice: parseFloat(document.getElementById('foodPrice').value),
+                deliveryPrice: price,
+                area: document.getElementById('hurghadaArea').value,
+                prepTime: document.getElementById('prepTime').value,
+                clientName: document.getElementById('clientName').value,
+                clientPhone: document.getElementById('clientPhone').value,
+                address: document.getElementById('clientAddress').value || 'الغردقة',
+                status: 'pending',
+                restCoords: myCoords,
+                captainName: '',
+                captainEmail: ''
+            };
+
+            orders.unshift(newOrder);
+            localStorage.setItem('delivery_orders', JSON.stringify(orders));
+            channel.postMessage({ type: 'UPDATE_ORDERS' });
+            loadOrders();
+            alert('تم نشر الأوردر بنجاح!');
+        }
+
+        function updateStatus(id, newStatus) {
+            let orders = JSON.parse(localStorage.getItem('delivery_orders') || '[]');
+            const idx = orders.findIndex(o => o.id === id);
+            if (idx !== -1) {
+                if (newStatus === 'delivered') {
+                    const delivered = JSON.parse(localStorage.getItem('delivered_history') || '[]');
+                    delivered.push({ ...orders[idx], captainName: currentUser.name, captainEmail: currentUser.email });
+                    localStorage.setItem('delivered_history', JSON.stringify(delivered));
+                    orders.splice(idx, 1);
+                    alert('تم تسليم الأوردر وحذفه بنجاح!');
+                } else {
+                    orders[idx].status = newStatus;
+                    orders[idx].captainName = currentUser.name;
+                    orders[idx].captainEmail = currentUser.email;
+                }
+                localStorage.setItem('delivery_orders', JSON.stringify(orders));
+                channel.postMessage({ type: 'UPDATE_ORDERS' });
+                loadOrders();
+            }
+        }
+
+        function deleteOrder(id) {
+            if (confirm('هل تريد إلغاء وحذف هذا الطلب؟')) {
+                let orders = JSON.parse(localStorage.getItem('delivery_orders') || '[]');
+                orders = orders.filter(o => o.id !== id);
+                localStorage.setItem('delivery_orders', JSON.stringify(orders));
+                const delCount = parseInt(localStorage.getItem('deleted_orders_count') || '0');
+                localStorage.setItem('deleted_orders_count', (delCount + 1).toString());
+                channel.postMessage({ type: 'UPDATE_ORDERS' });
+                loadOrders();
+            }
+        }
+
+        function translateStatusText(st) {
+            switch(st) {
+                case 'pending': return 'في انتظار قبول الطيار';
+                case 'accepted': return 'تم قبول الطلب (الكابتن في طريقه للمطعم)';
+                case 'picked': return 'تم الاستلام من المطعم (في الطريق للعميل)';
+                default: return st;
+            }
+        }
+
+        function loadOrders() {
+            const orders = JSON.parse(localStorage.getItem('delivery_orders') || '[]');
+
+            // واجهة المطعم
+            if (currentUser && currentUser.role === 'restaurant') {
+                const restList = document.getElementById('restOrdersList');
+                const myOrders = orders.filter(o => o.restEmail === currentUser.email);
+                restList.innerHTML = myOrders.map(o => {
+                    const capGps = o.captainEmail ? JSON.parse(localStorage.getItem(`captain_gps_${o.captainEmail}`) || 'null') : null;
+                    const hasCaptain = o.status !== 'pending' && o.captainName;
+
+                    return `
+                        <div class="order-card">
+                            <div><strong>${o.id}</strong> - ${o.area}</div>
+                            <div class="price-box">
+                                <div class="food-price-tag">ثمن الطعام: ${o.foodPrice} ج</div>
+                                <div class="price-tag">أجر التوصيل: ${o.deliveryPrice} ج</div>
+                            </div>
+                            <div style="font-size:0.85rem; margin-bottom:4px;">العميل: ${o.clientName} | ${o.clientPhone}</div>
+                            <div style="font-size:0.85rem; color:var(--warning); font-weight:700; margin-bottom:4px;">وقت التجهيز: ${o.prepTime}</div>
+                            <div style="font-weight:700; color:var(--primary); font-size:0.85rem; margin-bottom:6px;">الحالة: ${translateStatusText(o.status)}</div>
+                            
+                            <!-- إظهار تفاصيل الكابتن وزر الهاتف وموقعه فور القبول -->
+                            ${hasCaptain ? `
+                                <div class="captain-details-box">
+                                    <div style="font-weight:800; color:var(--primary); margin-bottom:6px;"><i class="fa-solid fa-motorcycle"></i> بيانات الكابتن المقترن:</div>
+                                    <div>اسم الطيار: <strong>${o.captainName}</strong></div>
+                                    <div style="margin-top:8px;" class="btn-group-row">
+                                        <a href="tel:${o.captainEmail}" class="btn btn-outline-call" style="font-size:0.8rem; padding:6px; flex:1;">
+                                            <i class="fa-solid fa-phone"></i> اتصال بالكابتن (${o.captainEmail})
+                                        </a>
+                                        ${capGps ? `
+                                            <a href="https://maps.google.com/?q=${capGps.lat},${capGps.lng}" target="_blank" class="btn btn-secondary" style="font-size:0.8rem; padding:6px; flex:1;">
+                                                <i class="fa-solid fa-location-arrow"></i> خريطة موقع الكابتن المباشر
+                                            </a>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            ` : ''}
+
+                            <button class="btn btn-danger" onclick="deleteOrder('${o.id}')">إلغاء الطلب</button>
+                        </div>
+                    `;
+                }).join('') || '<p style="text-align:center; color:var(--text-muted); padding:1rem;">لا توجد أوردرات نشطة</p>';
+            }
+
+            // واجهة الكابتن
+            if (currentUser && currentUser.role === 'captain') {
+                const capList = document.getElementById('captainOrdersList');
+                capList.innerHTML = orders.map(o => {
+                    const restGps = o.restCoords || { lat: 27.2579, lng: 33.8116 };
+                    return `
+                        <div class="order-card">
+                            <div><strong>${o.id}</strong> | مطعم: <strong>${o.restName}</strong></div>
+                            
+                            <div class="price-box">
+                                <div class="food-price-tag"><i class="fa-solid fa-money-bill-wave"></i> تدفع للمطعم: ${o.foodPrice} ج</div>
+                                <div class="price-tag"><i class="fa-solid fa-hand-holding-dollar"></i> أجر التوصيل: ${o.deliveryPrice} ج</div>
+                            </div>
+
+                            <div style="font-size:0.9rem; font-weight:700; color:var(--warning); margin-bottom:4px;"><i class="fa-solid fa-stopwatch"></i> ${o.prepTime}</div>
+                            <div style="font-size:0.9rem; margin-bottom:4px;"><i class="fa-solid fa-user"></i> العميل: <strong>${o.clientName}</strong></div>
+                            <div style="font-size:0.85rem; margin-bottom:8px;"><i class="fa-solid fa-location-dot"></i> العنوان: ${o.address} (${o.area})</div>
+                            
+                            <div class="btn-group-row">
+                                <a href="tel:${o.clientPhone}" class="btn btn-outline-call">
+                                    <i class="fa-solid fa-phone-flip"></i> اتصال بالعميل (${o.clientPhone})
+                                </a>
+                                <a href="https://maps.google.com/?q=${restGps.lat},${restGps.lng}" target="_blank" class="btn btn-secondary">
+                                    <i class="fa-solid fa-map-location-dot"></i> موقع المطعم
+                                </a>
+                            </div>
+
+                            <div style="font-weight:700; color:var(--primary); font-size:0.85rem; margin:8px 0;">حالة الطلب الحالية: ${translateStatusText(o.status)}</div>
+
+                            <div style="margin-top:10px;">
+                                ${o.status === 'pending' ? `<button class="btn btn-primary" onclick="updateStatus('${o.id}', 'accepted')"><i class="fa-solid fa-check"></i> قبول الطلب</button>` : ''}
+                                ${o.status === 'accepted' ? `<button class="btn btn-warning" onclick="updateStatus('${o.id}', 'picked')"><i class="fa-solid fa-box-archive"></i> استلام الأوردر ودفع (${o.foodPrice}ج) للمطعم</button>` : ''}
+                                ${o.status === 'picked' ? `<button class="btn btn-success" onclick="updateStatus('${o.id}', 'delivered')"><i class="fa-solid fa-circle-check"></i> تسليم الأوردر للعميل (إكمال وحذف)</button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                }).join('') || '<p style="text-align:center; color:var(--text-muted); grid-column:1/-1; padding:2rem;">لا توجد طلبات متاحة حالياً</p>';
+            }
+        }
+    </script>
+</body>
+</html>
